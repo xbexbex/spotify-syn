@@ -1,0 +1,12 @@
+{
+  "bannedDeviceIds": ["1234"],
+  "preferredDeviceIds": [
+    "9867khjkjh",
+    "ohkjh8"
+  ],
+  "clientId": "kljjhgil78",
+  "clientSecret": "kjhkhklhl88",
+  "defaultTimeout": 1000,
+  "port": 61111,
+  "address": "http://localhost"
+}
