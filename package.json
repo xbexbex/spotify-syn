@@ -1,0 +1,12 @@
+{
+  "name": "spotify-device-limbo",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "xbexbex",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.20.0",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1"
+  }
+}
