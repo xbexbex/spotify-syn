@@ -9,6 +9,9 @@ const conf = JSON.parse(fs.readFileSync("config.json", "utf8"));
 
 const pollInterval = 200;
 
+let scriptCallTimeStamp = Date.now();
+let lastScriptCommand = "";
+
 const encodedAuth = Buffer.from(
   `${conf.clientId}:${conf.clientSecret}`
 ).toString("base64");
@@ -179,6 +182,23 @@ app.get("/callback", async (req, res) => {
   return;
 });
 
+const callRemoteScript = (sPath, command) => {
+  const ts = Date.now();
+
+  if (ts - scriptCallTimeStamp > 3500 || lastScriptCommand !== command) {
+    spawn("python3", [
+      sPath + "broadlink_cli",
+      "--device",
+      "@" + sPath + "d.device",
+      "--send",
+      "@" + sPath + command,
+    ]);
+
+    lastScriptCommand = command
+    scriptCallTimeStamp = ts
+  }
+};
+
 const pollDevices = async () => {
   try {
     const currentPlayback = await getCurrentPlayback(conf.accessToken, 1000);
@@ -194,10 +214,11 @@ const pollDevices = async () => {
         }
 
         let command = "";
-        for (i in preferredDeviceIds) {
-          devId = preferredDeviceIds[i];
 
-          if (conf.deviceIds.includes(devId)) {
+        for (i in conf.preferredDeviceIds) {
+          const devId = conf.preferredDeviceIds[i];
+
+          if (deviceIds.includes(devId)) {
             id = devId;
             command = conf.remoteCommands[i];
             break;
@@ -207,13 +228,7 @@ const pollDevices = async () => {
         try {
           if (id) {
             transferCurrentPlayback(id, conf.accessToken, conf.defaultTimeout);
-            spawn("python3", [
-              conf.scriptPath + "broadlink_cli",
-              "--device",
-              "@" + conf.scriptPath + "d.device",
-              "--send",
-              "@" + conf.scriptPath + command,
-            ]);
+            callRemoteScript(conf.scriptPath, command);
           }
         } catch (err) {
           if (err.response && err.response.status !== 404) {
