@@ -187,11 +187,17 @@ const pollDevices = async () => {
         let id = null;
 
         const devices = await getDevices(conf.accessToken, conf.defaultTimeout);
+        const deviceIds = [];
+
+        for (i in devices) {
+          deviceIds.push(devices[i].id);
+        }
 
         let command = "";
-        for (i in devices) {
-          devId = devices[i].id;
-          if (conf.preferredDeviceIds.includes(devId)) {
+        for (i in preferredDeviceIds) {
+          devId = preferredDeviceIds[i];
+
+          if (conf.deviceIds.includes(devId)) {
             id = devId;
             command = conf.remoteCommands[i];
             break;
@@ -202,7 +208,7 @@ const pollDevices = async () => {
           if (id) {
             transferCurrentPlayback(id, conf.accessToken, conf.defaultTimeout);
             spawn("python3", [
-              conf.scriptPath + "broadlink-cli",
+              conf.scriptPath + "broadlink_cli",
               "--device",
               "@" + conf.scriptPath + "d.device",
               "--send",
