@@ -3,6 +3,7 @@ const axios = require("axios");
 const app = express();
 const qs = require("qs");
 const fs = require("fs");
+const spawn = require("child_process").spawn;
 
 const conf = JSON.parse(fs.readFileSync("config.json", "utf8"));
 
@@ -187,10 +188,12 @@ const pollDevices = async () => {
 
         const devices = await getDevices(conf.accessToken, conf.defaultTimeout);
 
+        let command = "";
         for (i in devices) {
           devId = devices[i].id;
           if (conf.preferredDeviceIds.includes(devId)) {
             id = devId;
+            command = conf.remoteCommands[i];
             break;
           }
         }
@@ -198,6 +201,13 @@ const pollDevices = async () => {
         try {
           if (id) {
             transferCurrentPlayback(id, conf.accessToken, conf.defaultTimeout);
+            spawn("python3", [
+              conf.scriptPath + "broadlink-cli",
+              "--device",
+              "@" + conf.scriptPath + "d.device",
+              "--send",
+              "@" + conf.scriptPath + command,
+            ]);
           }
         } catch (err) {
           if (err.response && err.response.status !== 404) {
