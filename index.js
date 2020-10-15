@@ -12,6 +12,10 @@ const pollInterval = 200;
 let scriptCallTimeStamp = Date.now();
 let lastScriptCommand = "";
 
+const errorMsg = (message) => {
+  console.error(new Date(Date.now()).toLocaleString() + ": " + message);
+};
+
 const encodedAuth = Buffer.from(
   `${conf.clientId}:${conf.clientSecret}`
 ).toString("base64");
@@ -174,8 +178,8 @@ app.get("/callback", async (req, res) => {
       res.redirect("/devices");
       return;
     } catch (err) {
-      console.error(err.response.status);
-      err.response.message && console.error(err.response.message);
+      errorMsg(err.response.status);
+      err.response.message && errorMsg(err.response.message);
     }
   }
   res.send("Authorization failed");
@@ -194,8 +198,8 @@ const callRemoteScript = (sPath, command) => {
       "@" + sPath + command,
     ]);
 
-    lastScriptCommand = command
-    scriptCallTimeStamp = ts
+    lastScriptCommand = command;
+    scriptCallTimeStamp = ts;
   }
 };
 
@@ -239,8 +243,8 @@ const pollDevices = async () => {
     }
   } catch (err) {
     if (!err.response && err.code) {
-      if (!["ETIMEDOUT", "ECONNABORTED"].includes(err.code)) {
-        console.log(err);
+      if (!["ETIMEDOUT", "ECONNABORTED", "ENETUNREACH"].includes(err.code)) {
+        errorMsg(err.code);
       }
     } else if (err.response) {
       if (err.response.status === 401) {
@@ -252,13 +256,13 @@ const pollDevices = async () => {
           pollTimer(1);
           return;
         } catch (err) {
-          console.error(err.response.status);
-          err.response.message && console.error(err.response.message);
+          errorMsg(err.response.status);
+          err.response.message && errorMsg(err.response.message);
 
           if ([400, 401].includes(err.response.status)) {
             conf.accessToken = null;
             conf.refreshToken = null;
-            console.log(
+            errorMsg(
               `Authorization expired. Please visit ${conf.address}:${conf.port}`
             );
             return;
@@ -266,14 +270,14 @@ const pollDevices = async () => {
         }
       }
       if (err.response.status === 429) {
-        console.log(new Date(Date.now()));
+        errorMsg("429: too many requests");
         pollTimer(5000);
         return;
       }
 
       if (![408, 504].includes(err.response.status)) {
-        console.error(err.response.status);
-        err.response.message && console.error(err.response.message);
+        errorMsg(err.response.status);
+        err.response.message && errorMsg(err.response.message);
       }
     }
   }
@@ -292,5 +296,5 @@ if (conf.bannedDeviceIds && conf.preferredDeviceIds && conf.accessToken) {
 }
 
 app.listen(conf.port, "0.0.0.0", () => {
-  console.log(`Example app listening at ${conf.address}:${conf.port}`);
+  console.log(`Spotify Syn listening at ${conf.address}:${conf.port}`);
 });
