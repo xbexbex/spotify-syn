@@ -11,7 +11,7 @@ const pollInterval = 200;
 
 let scriptCallTimeStamp = Date.now();
 let lastScriptCommand = "";
-let wasPlaying = false;
+let lastId = ""
 
 const errorMsg = (message) => {
   console.error(new Date(Date.now()).toLocaleString() + ": " + message);
@@ -251,7 +251,7 @@ const pollDevices = async () => {
             throw err;
           }
         }
-      } else if (!wasPlaying) {
+      } else if (currentPlayback.device.id != lastId) {
         if (conf.preferredDeviceIds.includes(currentPlayback.device.id)) {
           const command = getCommand();
 
@@ -268,7 +268,8 @@ const pollDevices = async () => {
       }
     }
 
-    wasPlaying = currentPlayback.is_playing;
+    lastId = currentPlayback.device.id
+
   } catch (err) {
     if (!err.response && err.code) {
       if (!["ETIMEDOUT", "ECONNABORTED", "ENETUNREACH"].includes(err.code)) {
