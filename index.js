@@ -11,6 +11,7 @@ const pollInterval = 200;
 
 let scriptCallTimeStamp = Date.now();
 let lastScriptCommand = "";
+let wasPlaying = false;
 
 const errorMsg = (message) => {
   console.error(new Date(Date.now()).toLocaleString() + ": " + message);
@@ -203,9 +204,30 @@ const callRemoteScript = (sPath, command) => {
   }
 };
 
+const getCommand = () => {
+  let command = "";
+
+  for (i in conf.preferredDeviceIds) {
+    const devId = conf.preferredDeviceIds[i];
+
+    if (deviceIds.includes(devId)) {
+      id = devId;
+      command = conf.remoteCommands[i];
+      break;
+    }
+  }
+
+  if (id) {
+    return command;
+  }
+
+  return null;
+};
+
 const pollDevices = async () => {
   try {
     const currentPlayback = await getCurrentPlayback(conf.accessToken, 1000);
+
     if (currentPlayback.is_playing) {
       if (conf.bannedDeviceIds.includes(currentPlayback.device.id)) {
         let id = null;
@@ -217,20 +239,10 @@ const pollDevices = async () => {
           deviceIds.push(devices[i].id);
         }
 
-        let command = "";
-
-        for (i in conf.preferredDeviceIds) {
-          const devId = conf.preferredDeviceIds[i];
-
-          if (deviceIds.includes(devId)) {
-            id = devId;
-            command = conf.remoteCommands[i];
-            break;
-          }
-        }
+        const command = getCommand();
 
         try {
-          if (id) {
+          if (command) {
             transferCurrentPlayback(id, conf.accessToken, conf.defaultTimeout);
             callRemoteScript(conf.scriptPath, command);
           }
@@ -239,8 +251,24 @@ const pollDevices = async () => {
             throw err;
           }
         }
+      } else if (!wasPlaying) {
+        if (conf.preferredDeviceIds.includes(currentPlayback.device.id)) {
+          const command = getCommand();
+
+          try {
+            if (command) {
+              callRemoteScript(conf.scriptPath, command);
+            }
+          } catch (err) {
+            if (err.response && err.response.status !== 404) {
+              throw err;
+            }
+          }
+        }
       }
     }
+
+    wasPlaying = currentPlayback.is_playing;
   } catch (err) {
     if (!err.response && err.code) {
       if (!["ETIMEDOUT", "ECONNABORTED", "ENETUNREACH"].includes(err.code)) {
