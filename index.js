@@ -190,7 +190,10 @@ app.get("/callback", async (req, res) => {
 const callRemoteScript = (sPath, command) => {
   const ts = Date.now();
 
-  if (ts - scriptCallTimeStamp > 3500 || lastScriptCommand !== command) {
+  if (
+    ts - scriptCallTimeStamp > conf.scriptTimeout ||
+    lastScriptCommand !== command
+  ) {
     spawn("python3", [
       sPath + "broadlink_cli",
       "--device",

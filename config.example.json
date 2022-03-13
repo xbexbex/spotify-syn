@@ -7,6 +7,7 @@
   "clientId": "kljjhgil78",
   "clientSecret": "kjhkhklhl88",
   "defaultTimeout": 1000,
+  "scriptTimeout": 5000,
   "port": 61111,
   "address": "http://localhost"
 }
