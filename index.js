@@ -270,10 +270,13 @@ const pollDevices = async () => {
 
     lastId = currentPlayback.device.id;
   } catch (err) {
-    if (!err.response && err.code) {
-      if (!["ETIMEDOUT", "ECONNABORTED", "ENETUNREACH"].includes(err.code)) {
-        errorMsg(err.code);
-      }
+    if (
+      err.code &&
+      !["ETIMEDOUT", "ECONNABORTED", "ENETUNREACH", "EAI_AGAIN"].includes(
+        err.code
+      )
+    ) {
+      errorMsg(err.code);
     } else if (err.response) {
       if (err.response.status === 401) {
         try {
@@ -315,7 +318,19 @@ const pollDevices = async () => {
 
 const pollTimer = (timeout) => {
   setTimeout(() => {
-    pollDevices();
+    try {
+      pollDevices();
+    } catch (err) {
+      msg = "";
+
+      if (err.code) {
+        msg = err.code;
+      } else if (error.response && error.response.message) {
+        msg = error.response.message;
+      }
+
+      errorMsg("pollTimer: " + msg);
+    }
   }, timeout);
 };
 
