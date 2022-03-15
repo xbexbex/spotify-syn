@@ -191,8 +191,8 @@ const callRemoteScript = (sPath, command) => {
   const ts = Date.now();
 
   if (
-    ts - scriptCallTimeStamp > conf.scriptTimeout ||
-    lastScriptCommand !== command
+    ts - conf.scriptCallTimeStamp > conf.scriptTimeout ||
+    conf.lastScriptCommand !== command
   ) {
     spawn("python3", [
       sPath + "broadlink_cli",
@@ -201,9 +201,10 @@ const callRemoteScript = (sPath, command) => {
       "--send",
       "@" + sPath + command,
     ]);
+    conf.scriptCallTimeStamp = ts;
+    conf.lastScriptCommand = command;
 
-    lastScriptCommand = command;
-    scriptCallTimeStamp = ts;
+    confSave();
   }
 };
 
