@@ -3,15 +3,17 @@ const axios = require("axios");
 const app = express();
 const qs = require("qs");
 const fs = require("fs");
+const { error } = require("console");
 const spawn = require("child_process").spawn;
 
 const conf = JSON.parse(fs.readFileSync("config.json", "utf8"));
 
-const pollInterval = 200;
+const pollInterval = 1000;
 
 let scriptCallTimeStamp = Date.now();
 let lastScriptCommand = "";
 let lastId = "";
+let transferInProgress = false;
 
 const errorMsg = (message) => {
   console.error(new Date(Date.now()).toLocaleString() + ": " + message);
@@ -87,14 +89,19 @@ const transferCurrentPlayback = async (id, accessToken, timeout) => {
     Authorization: "Bearer " + accessToken,
     "Content-Type": "application/json",
   };
+  
+  try {
 
-  const sRes = await axios.put("https://api.spotify.com/v1/me/player", data, {
-    headers,
-    timeout: timeout,
-  });
-
-  if (sRes) {
-    return true;
+    const sRes = await axios.put("https://api.spotify.com/v1/me/player", data, {
+      headers,
+      timeout: timeout,
+    });
+    
+    if (sRes) {
+      return true;
+    }
+  } catch (err) {
+    return false
   }
 
   return false;
@@ -210,7 +217,7 @@ const callRemoteScript = (sPath, command) => {
 
 const pollDevices = async () => {
   try {
-    const currentPlayback = await getCurrentPlayback(conf.accessToken, 1000);
+    const currentPlayback = await getCurrentPlayback(conf.accessToken, 2000);
 
     if (currentPlayback.is_playing) {
       if (conf.bannedDeviceIds.includes(currentPlayback.device.id)) {
@@ -236,14 +243,17 @@ const pollDevices = async () => {
         }
 
         try {
-          if (command !== "") {
-            transferCurrentPlayback(id, conf.accessToken, conf.defaultTimeout);
+          if (command !== "" && !transferInProgress) {
+            transferInProgress = true
+            transferCurrentPlayback(id, conf.accessToken, 3000);
             callRemoteScript(conf.scriptPath, command);
           }
         } catch (err) {
           if (err.response && err.response.status !== 404) {
-            throw err;
+            logger.error(err.response)
           }
+        } finally {
+          transferInProgress = false
         }
       } else if (currentPlayback.device.id !== lastId) {
         if (conf.preferredDeviceIds.includes(currentPlayback.device.id)) {
